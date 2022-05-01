@@ -47,12 +47,12 @@ args['port']
 const log = args.log || 'true';
 const debug = args.debug || 'false';
 
-if (log == true) {
+if (log == 'false') {
+  	console.log('ERRORERRORERROR');
+}else {
   	const WRITESTREAM = fs.createWriteStream('FILE', { flags: 'a' })
   	// Set up the access logging middleware
   	app.use(morgan('FORMAT', { stream: WRITESTREAM }))
-}else {
-  	console.log("ErrorErrorError");
 }
 
 app.use((req, res, next) => {
