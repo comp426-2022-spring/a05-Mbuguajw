@@ -34,25 +34,26 @@ if (args.help || args.h) {
   	process.exit(0)
 }
 
-// Start server
 const server = app.listen(HTTP_PORT, () => {
 	console.log("App listening on port %PORT%".replace("%PORT%",HTTP_PORT))
 });
-// Use morgan for logging to files
-// Create a write stream to append (flags: 'a') to a file
+
 args['log']
 args['debug']
 args['port']
 
-const log = args.log || 'true';
 const debug = args.debug || 'false';
 
-if (log == 'false') {
-  	console.log('ERRORERRORERROR');
-}else {
-  	const WRITESTREAM = fs.createWriteStream('FILE', { flags: 'a' })
-  	// Set up the access logging middleware
-  	app.use(morgan('FORMAT', { stream: WRITESTREAM }))
+if (args.log == 'false') {
+    console.log("NOTICE: not creating file access.log")
+} else {
+    const logdir = './log/';
+
+    if (!fs.existsSync(logdir)){
+        fs.mkdirSync(logdir);
+    }
+    const accessLog = fs.createWriteStream( logdir+'access.log', { flags: 'a' })
+    app.use(morgan('combined', { stream: accessLog }))
 }
 
 app.use((req, res, next) => {
@@ -97,71 +98,99 @@ app.get('/app/', (req, res) => {
   	// res.writeHead( res.statusCode, { 'Content-Type' : 'text/plain' });
   	// res.end(res.statusCode+ ' ' +res.statusMessage);
 })
-
 app.get('/app/flip/', (req, res) => {
-  	var flip = coinFlip();
-  	res.json({ "flip" : flip})
+    const flip = coinFlip()
+    res.status(200).json({ "flip" : flip })
 });
 
-app.get('/app/flips/:number', (req, res) => {
-  	var flips = coinFlips(req.params.number);
-  	var stats = countFlips(flips);
-  	res.json({"raw" : flips, "summary" : stats});
+app.post('/app/flip/coins/', (req, res, next) => {
+    const flips = coinFlips(req.body.number)
+    const count = countFlips(flips)
+    res.status(200).json({"raw":flips,"summary":count})
+})
+
+app.get('/app/flips/:number', (req, res, next) => {
+    const flips = coinFlips(req.params.number)
+    const count = countFlips(flips)
+    res.status(200).json({"raw":flips,"summary":count})
 });
 
-app.get('/app/flip/call/heads', (req, res) => {
-  	const head = flipACoin('heads');
-  	res.json(head);
-});
+app.post('/app/flip/call/', (req, res, next) => {
+    const game = flipACoin(req.body.guess)
+    res.status(200).json(game)
+})
 
-app.get('/app/flip/call/tails', (req, res) => {
-  	const tail = flipACoin('tails');
-  	res.json(tail);
-});
+app.get('/app/flip/call/:guess(heads|tails)/', (req, res, next) => {
+    const game = flipACoin(req.params.guess)
+    res.status(200).json(game)
+})
 
-app.use(function(req, res){
-  	res.status(404).send('404 NOT FOUND');
-  	res.type("text/plain")
-});
+if (args.debug || args.d) {
+    app.get('/app/log/access/', (req, res, next) => {
+        const stmt = logdb.prepare("SELECT * FROM accesslog").all();
+	    res.status(200).json(stmt);
+    })
+
+    app.get('/app/error/', (req, res, next) => {
+        throw new Error('Error test works.')
+    })
+}
 
 function coinFlip() {
-  	var num = Math.floor(Math.random()*100);
-  	if (num % 2 == 0) {
-    	return "heads"
-  	} 
-  	else {
-    	return "tails"
-  	}
-}
-  
-function coinFlips(flips) {
-  	const results = new Array();
-  	for (let i=0; i < flips; i++) {
-    	results[i] = coinFlip();
-  	}
-  	return results;
-}
+	var num = Math.floor(Math.random()*100);
+	if (num % 2 == 0) {
+	  return "heads"
+	} 
+	else {
+	  return "tails"
+	}
+} 
 
-function countFlips(array) {
-	var heads = 0;
-  	var tails = 0;
-  	for (let i=0; i < array.length; i++) {
-    	if (array[i] == "heads") {
-      		heads += 1;
-    	}
-    	if (array[i] == "tails") {
-      		tails += 1;
-    	}
-  	}
-  	return {"heads": heads, "tails": tails};
-}
+function coinFlips(flips) {	
+	const results = new Array();	
+	for (let i=0; i < flips; i++) {	
+	  results[i] = coinFlip();	
+	}	
+	return results;	
+}	
 
-function flipACoin(call) {
-  	var results = coinFlip();
-  	if (results == call) {
-    	return {call: call, flip: results, result: "win"};
-  	}
-  	else {
-    	return {call: call, flip: results, result: "lose"};
-  	}
-}
+function countFlips(array) {	
+  var heads = 0;	
+	var tails = 0;	
+	for (let i=0; i < array.length; i++) {	
+	  if (array[i] == "heads") {	
+			heads += 1;	
+	  }	
+	  if (array[i] == "tails") {	
+			tails += 1;	
+	  }	
+	}	
+	return {"heads": heads, "tails": tails};	
+}	
+
+function flipACoin(call) {	
+	var results = coinFlip();	
+	if (results == call) {	
+	  return {call: call, flip: results, result: "win"};	
+	}	
+	else {	
+	  return {call: call, flip: results, result: "lose"};	
+	}	
+} 	
+
+app.use(function(req, res){
+    const statusCode = 404
+    const statusMessage = 'NOT FOUND'
+    res.status(statusCode).end(statusCode+ ' ' +statusMessage)
+});
+
+// Start server
+const server = app.listen(port, () => {
+    console.log("Server running on port %PORT%".replace("%PORT%",port))
+});
+// Tell STDOUT that the server is stopped
+process.on('SIGINT', () => {
+    server.close(() => {
+		console.log('\nApp stopped.');
+	});
+});

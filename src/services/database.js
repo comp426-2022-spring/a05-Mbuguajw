@@ -1,18 +1,16 @@
-// Put your database code here
-//const { debug } = require('console');
-// Connect to a database or create one if it doesn't exist yet.
-"use strict";
-const Database = require('better-sqlite3');
-const db = new Database('log.db');
+const database = require('better-sqlite3')
 
-// Is the database initialized or do we need to initialize it?
+const fs = require('fs');
+const data = './data/';
 
-const stmt = db.prepare(`
-    SELECT name FROM sqlite_master WHERE type='table' and name='userinfo';`
-);
-// Define row using `get()` from better-sqlite3
+if (!fs.existsSync(data)){
+    fs.mkdirSync(data);
+}
+
+const logdb = new database(data+'log.db')
+
+const stmt = logdb.prepare(`SELECT name FROM sqlite_master WHERE type='table' and name='accesslog';`)
 let row = stmt.get();
-// Check if there is a table. If row is undefined then no table exists.
 if (row === undefined) {
 // Echo information about what you are doing to the console.
     console.log('Your database appears to be empty. I will initialize it now.');
