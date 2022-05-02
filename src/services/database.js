@@ -1,15 +1,15 @@
 const database = require('better-sqlite3')
 
 const fs = require('fs');
-const datadir = './data/';
+const datalocal = './data/';
 
-if (!fs.existsSync(datadir)){
-    fs.mkdirSync(datadir);
+if (!fs.existsSync(datalocal)){
+    fs.mkdirSync(datalocal);
 }
 
-const logdb = new database(datadir+'log.db')
+const logged = new database(datadir+'log.db')
 
-const stmt = logdb.prepare(`SELECT name FROM sqlite_master WHERE type='table' and name='accesslog';`)
+const stmt = logged.prepare(`SELECT name FROM sqlite_master WHERE type='table' and name='accesslog';`)
 let row = stmt.get();
 if (row === undefined) {
     console.log('Log database appears to be empty. Creating log database...')
@@ -30,9 +30,10 @@ if (row === undefined) {
         );
     `
 
-    logdb.exec(sqlInit)
-} else {
+    logged.exec(sqlInit)
+} 
+else {
     console.log('Log database exists.')
 }
 
-module.exports = logdb
+module.exports = logged
