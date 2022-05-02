@@ -34,10 +34,6 @@ if (args.help || args.h) {
   	process.exit(0)
 }
 
-const server = app.listen(HTTP_PORT, () => {
-	console.log("App listening on port %PORT%".replace("%PORT%",HTTP_PORT))
-});
-
 args['log']
 args['debug']
 args['port']
@@ -185,8 +181,8 @@ app.use(function(req, res){
 });
 
 // Start server
-const server = app.listen(port, () => {
-    console.log("Server running on port %PORT%".replace("%PORT%",port))
+const server = app.listen(HTTP_PORT, () => {
+    console.log("Server running on port %PORT%".replace("%PORT%",HTTP_PORT))
 });
 // Tell STDOUT that the server is stopped
 process.on('SIGINT', () => {
