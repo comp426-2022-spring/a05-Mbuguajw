@@ -1,5 +1,9 @@
+// Require minimist module (make sure you install this one via npm).
+// Require minimist module
 const args = require('minimist')(process.argv.slice(2))
-
+// See what is stored in the object produced by minimist
+//console.log('Command line arguments: ', args)
+// Store help text 
 const help = (`
 server.js [options]
 --port, -p	Set the port number for the server to listen on. Must be an integer
@@ -12,33 +16,43 @@ server.js [options]
             Logs are always written to database.
 --help, -h	Return this message and exit.
 `)
-
+// If --help, echo help text and exit
 if (args.help || args.h) {
     console.log(help)
     process.exit(0)
 }
-
+// Define app using express
 var express = require('express')
 var app = express()
+// Require fs
 const fs = require('fs')
+// Require morgan
 const morgan = require('morgan')
+// Require database SCRIPT file
 const logdb = require('./src/services/database.js')
-
+// Make Express use its own built-in body parser
+// Allow urlencoded body messages
+//app.use(express.urlencoded({ extended: true }));
+// Allow json body messages
 app.use(express.json());
+// Server port
 const port = args.port || args.p || process.env.PORT || 5000
+// If --log=false then do not create a log file
 if (args.log == 'false') {
     console.log("NOTICE: not creating file access.log")
-} 
-else {
+} else {
+// Use morgan for logging to files
     const logdir = './log/';
 
     if (!fs.existsSync(logdir)){
         fs.mkdirSync(logdir);
     }
+// Create a write stream to append to an access.log file
     const accessLog = fs.createWriteStream( logdir+'access.log', { flags: 'a' })
+// Set up the access logging middleware
     app.use(morgan('combined', { stream: accessLog }))
 }
-
+// Always log to database
 app.use((req, res, next) => {
     let logdata = {
         remoteaddr: req.ip,
@@ -54,12 +68,52 @@ app.use((req, res, next) => {
     };
     const stmt = logdb.prepare('INSERT INTO accesslog (remoteaddr, remoteuser, time, method, url, protocol, httpversion, status, referrer, useragent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     const info = stmt.run(logdata.remoteaddr, logdata.remoteuser, logdata.time, logdata.method, logdata.url, logdata.protocol, logdata.httpversion, logdata.status, logdata.referrer, logdata.useragent)
-    console.log(info)
+    //console.log(info)
     next();
 })
 
-// Previous API Construction from last assignment
+// Flip one coin
+function coinFlip() {
+    return (Math.floor(Math.random() * 2) == 0) ? 'heads' : 'tails';
+}
+// Flip many coins
+function coinFlips(flips) {
+    let array = [];
+    for (let i = 1; i <= flips; i++) {
+        array.push(coinFlip());
+    }
+    return array;
+}
+// Count coin flips
+function countFlips(array) {
+    let counter = {};
+    array.forEach(item => {
+        if (counter[item]) {
+            counter[item]++;
+        } else {
+            counter[item] = 1;
+        }
+    });
+    return counter;
+}
+// Call a coin flip
+function flipACoin(call) {
+    let flip = coinFlip();
+    let result;
+    if ( flip == call ) {
+        result = 'win'
+    } else {
+        result = 'lose'
+    }
+    let game = {
+        call: call,
+        flip: flip,
+        result: result
+    }
+    return game
+}
 
+// Serve static HTML public directory
 app.use(express.static('./public'))
 
 // READ (HTTP method GET) at root endpoint /app/
@@ -115,53 +169,6 @@ app.use(function(req, res){
     res.status(statusCode).end(statusCode+ ' ' +statusMessage)
 });
 
-function coinFlip() {
-	var num = Math.floor(Math.random()*100);
-	if (num % 2 == 0) {
-	  return "heads"
-	} 
-	else {
-	  return "tails"
-	}
-} 
-
-function coinFlips(flips) {	
-	const results = new Array();	
-	for (let i=0; i < flips; i++) {	
-	  results[i] = coinFlip();	
-	}	
-	return results;	
-}	
-
-function countFlips(array) {	
-  var heads = 0;	
-	var tails = 0;	
-	for (let i=0; i < array.length; i++) {	
-	  if (array[i] == "heads") {	
-			heads += 1;	
-	  }	
-	  if (array[i] == "tails") {	
-			tails += 1;	
-	  }	
-	}	
-	return {"heads": heads, "tails": tails};	
-}	
-
-function flipACoin(call) {	
-	var results = coinFlip();	
-	if (results == call) {	
-	  return {call: call, flip: results, result: "win"};	
-	}	
-	else {	
-	  return {call: call, flip: results, result: "lose"};	
-	}	
-} 	
-
-app.use(function(req, res){
-    const statusCode = 404
-    const statusMessage = 'NOT FOUND'
-    res.status(statusCode).end(statusCode+ ' ' +statusMessage)
-});
 // Start server
 const server = app.listen(port, () => {
     console.log("Server running on port %PORT%".replace("%PORT%",port))
